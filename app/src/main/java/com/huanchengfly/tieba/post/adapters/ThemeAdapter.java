@@ -3,26 +3,24 @@ package com.huanchengfly.tieba.post.adapters;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
-import android.graphics.Color;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.huanchengfly.tieba.post.ui.theme.interfaces.ExtraRefreshable;
-import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
+import com.huanchengfly.tieba.post.BaseApplication;
 import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.activities.TranslucentThemeActivity;
-import com.huanchengfly.tieba.post.BaseApplication;
 import com.huanchengfly.tieba.post.components.MyViewHolder;
 import com.huanchengfly.tieba.post.components.dialogs.CustomThemeDialog;
 import com.huanchengfly.tieba.post.interfaces.OnItemClickListener;
-import com.huanchengfly.tieba.post.utils.ThemeUtil;
+import com.huanchengfly.tieba.post.ui.theme.interfaces.ExtraRefreshable;
+import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 import com.huanchengfly.tieba.post.utils.ColorUtils;
+import com.huanchengfly.tieba.post.utils.ThemeUtil;
 
 import java.util.Arrays;
 import java.util.List;
@@ -48,6 +46,12 @@ public class ThemeAdapter extends RecyclerView.Adapter<MyViewHolder> implements 
         selectedPosition = themeList.indexOf(ThemeUtil.getTheme(mContext));
     }
 
+    public void refresh() {
+        List<String> themeList = Arrays.asList(themes);
+        selectedPosition = themeList.indexOf(ThemeUtil.getTheme(mContext));
+        notifyDataSetChanged();
+    }
+
     public OnItemClickListener<String> getOnItemClickListener() {
         return onItemClickListener;
     }
@@ -63,18 +67,11 @@ public class ThemeAdapter extends RecyclerView.Adapter<MyViewHolder> implements 
         return new MyViewHolder(mContext, R.layout.item_theme);
     }
 
-    private int alphaColor(@ColorInt int origin) {
-        int r = Color.red(origin);
-        int g = Color.green(origin);
-        int b = Color.blue(origin);
-        return Color.argb(254, r, g, b);
-    }
-
     private int getToolbarColor(String theme) {
         if (ThemeUtil.THEME_WHITE.equals(theme) || ThemeUtil.isNightMode(theme)) {
             return BaseApplication.ThemeDelegate.INSTANCE.getColorByAttr(mContext, R.attr.colorToolbar, theme);
-        } else if (THEME_TRANSLUCENT.equals(theme)) {
-            return ColorUtils.alpha(BaseApplication.ThemeDelegate.INSTANCE.getColorByAttr(mContext, R.attr.colorPrimary, theme), 150);
+        } else if (ThemeUtil.isTranslucentTheme(theme)) {
+            return ColorUtils.alpha(BaseApplication.ThemeDelegate.INSTANCE.getColorByAttr(mContext, R.attr.colorPrimary, ThemeUtil.THEME_TRANSLUCENT_LIGHT), 150);
         }
         return BaseApplication.ThemeDelegate.INSTANCE.getColorByAttr(mContext, R.attr.colorPrimary, theme);
     }

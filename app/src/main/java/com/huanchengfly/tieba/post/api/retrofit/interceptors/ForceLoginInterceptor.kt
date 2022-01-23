@@ -1,9 +1,9 @@
 package com.huanchengfly.tieba.post.api.retrofit.interceptors
 
+import com.huanchengfly.tieba.post.BaseApplication
 import com.huanchengfly.tieba.post.api.Error.ERROR_NOT_LOGGED_IN
 import com.huanchengfly.tieba.post.api.Header
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaLocalException
-import com.huanchengfly.tieba.post.BaseApplication
 import com.huanchengfly.tieba.post.utils.AccountUtil
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -28,11 +28,11 @@ object ForceLoginInterceptor : Interceptor {
         }
 
         return chain.proceed(
-                request.newBuilder()
-                        .headers(headers)
-                        .url(httpUrl)
-                        .method(request.method, body)
-                        .build()
+            request.newBuilder()
+                .headers(headers)
+                .url(httpUrl)
+                .method(request.method, body)
+                .build()
         )
     }
 

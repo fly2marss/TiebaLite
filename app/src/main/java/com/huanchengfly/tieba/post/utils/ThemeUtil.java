@@ -17,7 +17,6 @@ import android.widget.TextView;
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.StringDef;
 import androidx.annotation.StyleRes;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -32,8 +31,11 @@ import com.google.android.material.appbar.AppBarLayout;
 import com.huanchengfly.tieba.post.BaseApplication;
 import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.activities.BaseActivity;
+import com.huanchengfly.tieba.post.interfaces.BackgroundTintable;
 import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 import com.huanchengfly.tieba.post.widgets.theme.TintSwipeRefreshLayout;
+import com.scwang.smart.refresh.header.MaterialHeader;
+import com.scwang.smart.refresh.layout.SmartRefreshLayout;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -65,10 +67,17 @@ public class ThemeUtil {
     public static final String SP_CUSTOM_STATUS_BAR_FONT_DARK = "custom_status_bar_font_dark";
     public static final String SP_CUSTOM_TOOLBAR_PRIMARY_COLOR = "custom_toolbar_primary_color";
 
-    public static final String REASON_MANUALLY = "manually";
-    public static final String REASON_FOLLOW_SYSTEM = "follow_system";
-    public static final String REASON_TIME = "time";
     public static final String SP_TRANSLUCENT_THEME_BACKGROUND_PATH = "translucent_theme_background_path";
+
+    public static final int TRANSLUCENT_THEME_LIGHT = 0;
+    public static final int TRANSLUCENT_THEME_DARK = 1;
+
+    public static int fixColorForTranslucentTheme(int color) {
+        if (Color.alpha(color) == 0) {
+            return ColorUtils.alpha(color, 255);
+        }
+        return color;
+    }
 
     public static int getTextColor(Context context) {
         return ThemeUtils.getColorByAttr(context, R.attr.colorText);
@@ -79,11 +88,7 @@ public class ThemeUtil {
     }
 
     public static void switchToNightMode(Activity context) {
-        switchToNightMode(context, REASON_MANUALLY);
-    }
-
-    public static void switchToNightMode(Activity context, @Reason String reason) {
-        switchToNightMode(context, reason, true);
+        switchToNightMode(context, true);
     }
 
     public static void refreshUI(Activity activity) {
@@ -95,10 +100,9 @@ public class ThemeUtil {
     }
 
     @SuppressLint("ApplySharedPref")
-    public static void switchToNightMode(Activity context, @Reason String reason, boolean recreate) {
+    public static void switchToNightMode(Activity context, boolean recreate) {
         getSharedPreferences(context)
                 .edit()
-                .putString(SP_SWITCH_REASON, reason)
                 .putString(SP_OLD_THEME, getTheme(context))
                 .putString(SP_THEME, getSharedPreferences(context).getString(SP_DARK_THEME, THEME_BLUE_DARK))
                 .commit();
@@ -109,28 +113,18 @@ public class ThemeUtil {
 
     @SuppressLint("ApplySharedPref")
     public static void switchFromNightMode(Activity context) {
-        switchFromNightMode(context, REASON_MANUALLY);
+        switchFromNightMode(context, true);
     }
 
     @SuppressLint("ApplySharedPref")
     public static void switchFromNightMode(Activity context, boolean recreate) {
-        switchFromNightMode(context, REASON_MANUALLY, recreate);
-    }
-
-    @SuppressLint("ApplySharedPref")
-    public static void switchFromNightMode(Activity context, @Reason String reason) {
-        switchFromNightMode(context, reason, true);
-    }
-
-    @SuppressLint("ApplySharedPref")
-    public static void switchFromNightMode(Activity context, @Reason String reason, boolean recreate) {
         getSharedPreferences(context)
                 .edit()
-                .putString(SP_SWITCH_REASON, reason)
                 .putString(SP_THEME, getSharedPreferences(context).getString(SP_OLD_THEME, ThemeUtil.THEME_WHITE))
                 .commit();
-        //context.recreate();
-        if (recreate) refreshUI(context);
+        if (recreate) {
+            refreshUI(context);
+        }
     }
 
     public static SharedPreferences getSharedPreferences(Context context) {
@@ -142,16 +136,9 @@ public class ThemeUtil {
     }
 
     public static void setChipTheme(@ColorInt int color, View parent, TextView... textViews) {
-        if (getSharedPreferences(parent.getContext()).getBoolean("level_icon_old_style", false)) {
-            parent.setBackgroundTintList(ColorStateList.valueOf(color));
-            for (TextView textView : textViews) {
-                textView.setTextColor(ThemeUtils.getColorByAttr(parent.getContext(), R.attr.colorBg));
-            }
-        } else {
-            parent.setBackgroundTintList(ColorStateList.valueOf(color).withAlpha(60));
-            for (TextView textView : textViews) {
-                textView.setTextColor(color);
-            }
+        parent.setBackgroundTintList(ColorStateList.valueOf(color));
+        for (TextView textView : textViews) {
+            textView.setTextColor(ThemeUtils.getColorByAttr(parent.getContext(), R.attr.colorOnAccent));
         }
     }
 
@@ -168,12 +155,37 @@ public class ThemeUtil {
         }
     }
 
+    public static void setThemeForSmartRefreshLayout(SmartRefreshLayout smartRefreshLayout) {
+        Context context = smartRefreshLayout.getContext();
+        Resources resources = context.getResources();
+        if (resources != null) {
+            smartRefreshLayout.setPrimaryColors(ThemeUtils.getColorByAttr(context, R.attr.colorAccent));
+        }
+    }
+
+    public static void setThemeForMaterialHeader(MaterialHeader materialHeader) {
+        Context context = materialHeader.getContext();
+        Resources resources = context.getResources();
+        if (resources != null) {
+            materialHeader.setProgressBackgroundColorSchemeColor(resources.getColor(R.color.color_swipe_refresh_bg));
+            materialHeader.setColorSchemeColors(ThemeUtils.getColorByAttr(context, R.attr.colorAccent));
+        }
+    }
+
     public static boolean isNightMode(Context context) {
         return isNightMode(getTheme(context));
     }
 
     public static boolean isNightMode(String theme) {
         return theme.toLowerCase().contains("dark");
+    }
+
+    public static boolean isTranslucentTheme(Context context) {
+        return isTranslucentTheme(getTheme(context));
+    }
+
+    public static boolean isTranslucentTheme(String theme) {
+        return theme.equalsIgnoreCase(THEME_TRANSLUCENT) || theme.toLowerCase().contains(THEME_TRANSLUCENT);
     }
 
     public static boolean isStatusBarFontDark(Context context) {
@@ -195,15 +207,28 @@ public class ThemeUtil {
     }
 
     public static void setTheme(Activity context) {
-        String nowTheme = getTheme(context);
+        String nowTheme = getThemeTranslucent(context);
         context.setTheme(getThemeByName(nowTheme));
+    }
+
+    public static String getThemeTranslucent(Context context) {
+        String nowTheme = getTheme(context);
+        if (isTranslucentTheme(context)) {
+            int colorTheme = SharedPreferencesUtil.get(SharedPreferencesUtil.SP_SETTINGS).getInt("translucent_background_theme", TRANSLUCENT_THEME_LIGHT);
+            if (colorTheme == TRANSLUCENT_THEME_DARK) {
+                nowTheme = THEME_TRANSLUCENT_DARK;
+            } else {
+                nowTheme = THEME_TRANSLUCENT_LIGHT;
+            }
+        }
+        return nowTheme;
     }
 
     public static void setTranslucentThemeWebViewBackground(WebView webView) {
         if (webView == null) {
             return;
         }
-        if (!THEME_TRANSLUCENT.equals(ThemeUtil.getTheme(webView.getContext()))) {
+        if (!isTranslucentTheme(webView.getContext())) {
             return;
         }
         webView.setBackgroundColor(Color.WHITE);
@@ -227,7 +252,7 @@ public class ThemeUtil {
         if (view == null) {
             return;
         }
-        if (!THEME_TRANSLUCENT.equals(ThemeUtil.getTheme(view.getContext()))) {
+        if (!isTranslucentTheme(view.getContext())) {
             return;
         }
         view.setBackgroundTintList(null);
@@ -238,7 +263,7 @@ public class ThemeUtil {
         if (view == null) {
             return;
         }
-        if (!THEME_TRANSLUCENT.equals(ThemeUtil.getTheme(view.getContext()))) {
+        if (!isTranslucentTheme(view.getContext())) {
             return;
         }
         view.setBackgroundTintList(null);
@@ -249,7 +274,7 @@ public class ThemeUtil {
         if (view == null) {
             return;
         }
-        if (!THEME_TRANSLUCENT.equals(ThemeUtil.getTheme(BaseApplication.getInstance()))) {
+        if (!isTranslucentTheme(view.getContext())) {
             if (setFitsSystemWindow) {
                 setAppBarFitsSystemWindow(view, false);
                 view.setFitsSystemWindows(false);
@@ -269,6 +294,9 @@ public class ThemeUtil {
             }
         }
         view.setBackgroundTintList(null);
+        if (view instanceof BackgroundTintable) {
+            ((BackgroundTintable) view).setBackgroundTintResId(0);
+        }
         String backgroundFilePath = SharedPreferencesUtil.get(BaseApplication.getInstance(), SharedPreferencesUtil.SP_SETTINGS)
                 .getString(SP_TRANSLUCENT_THEME_BACKGROUND_PATH, null);
         if (backgroundFilePath == null) {
@@ -317,7 +345,7 @@ public class ThemeUtil {
     }
 
     public static void setTranslucentThemeBackground(View view) {
-        setTranslucentThemeBackground(view, true, true);
+        setTranslucentThemeBackground(view, true, false);
     }
 
     @StyleRes
@@ -356,6 +384,8 @@ public class ThemeUtil {
         String theme = getSharedPreferences(context).getString(SP_THEME, THEME_WHITE);
         switch (theme.toLowerCase()) {
             case THEME_TRANSLUCENT:
+            case THEME_TRANSLUCENT_LIGHT:
+            case THEME_TRANSLUCENT_DARK:
             case THEME_CUSTOM:
             case THEME_WHITE:
             case THEME_TIEBA:
@@ -370,9 +400,5 @@ public class ThemeUtil {
             default:
                 return THEME_WHITE;
         }
-    }
-
-    @StringDef({REASON_MANUALLY, REASON_FOLLOW_SYSTEM, REASON_TIME})
-    public @interface Reason {
     }
 }

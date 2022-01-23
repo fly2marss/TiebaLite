@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
@@ -18,15 +19,15 @@ import androidx.viewpager2.widget.ViewPager2
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback
 import butterknife.BindView
 import com.google.android.material.bottomappbar.BottomAppBar
-import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils
+import com.huanchengfly.tieba.post.BaseApplication.ScreenInfo
+import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.adapters.PhotoViewAdapter
 import com.huanchengfly.tieba.post.api.TiebaApi.getInstance
 import com.huanchengfly.tieba.post.api.models.PicPageBean
 import com.huanchengfly.tieba.post.api.models.PicPageBean.ImgInfoBean
-import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.adapters.PhotoViewAdapter
-import com.huanchengfly.tieba.post.BaseApplication.ScreenInfo
 import com.huanchengfly.tieba.post.fragments.PhotoViewFragment.OnChangeBottomBarVisibilityListener
 import com.huanchengfly.tieba.post.models.PhotoViewBean
+import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils
 import com.huanchengfly.tieba.post.utils.AnimUtil
 import com.huanchengfly.tieba.post.utils.ImageUtil
 import retrofit2.Call
@@ -170,9 +171,7 @@ class PhotoViewActivity : BaseActivity(), OnChangeBottomBarVisibilityListener, T
         }
     }
 
-    override fun isNeedImmersionBar(): Boolean {
-        return false
-    }
+    override val isNeedImmersionBar: Boolean = false
 
     override fun finish() {
         super.finish()
@@ -280,7 +279,7 @@ class PhotoViewActivity : BaseActivity(), OnChangeBottomBarVisibilityListener, T
         const val DEFAULT_HIDE_DELAY = 3000
         const val OBJ_TYPE_THREAD_PAGE = "pb"
         const val OBJ_TYPE_FORUM_PAGE = "frs"
-        private val handler = Handler()
+        private val handler = Handler(Looper.getMainLooper())
 
         @JvmStatic
         fun launch(context: Context, photoViewBean: PhotoViewBean) {

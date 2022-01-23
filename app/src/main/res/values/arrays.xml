@@ -25,8 +25,6 @@
     </string-array>
 
     <string-array name="theme_values">
-        <item>translucent</item>
-        <item>custom</item>
         <item>white</item>
         <item>tieba</item>
         <item>black</item>
@@ -39,8 +37,6 @@
     </string-array>
 
     <string-array name="themeNames">
-        <item>透明(BETA)</item>
-        <item>自定义</item>
         <item>素雅白</item>
         <item>深海蓝</item>
         <item>高级黑</item>
@@ -62,5 +58,17 @@
         <item>dark</item>
         <item>grey_dark</item>
         <item>amoled_dark</item>
+    </string-array>
+
+    <string-array name="forum_fab_function_values">
+        <item>post</item>
+        <item>refresh</item>
+        <item>back_to_top</item>
+    </string-array>
+
+    <string-array name="forum_fab_function_name_values">
+        <item>@string/btn_post</item>
+        <item>@string/btn_refresh</item>
+        <item>@string/btn_back_to_top</item>
     </string-array>
 </resources>

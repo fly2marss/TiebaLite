@@ -32,12 +32,12 @@ public class MessageActivity extends BaseActivity {
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
-            actionBar.setTitle(R.string.title_message);
+            actionBar.setTitle(R.string.title_my_message);
         }
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.activity_message_list_content,
-                            MessageFragment.newInstance(getIntent().getIntExtra("type", MessageFragment.TYPE_REPLY_ME), true), MessageFragment.class.getSimpleName()).commit();
+                            MessageFragment.newInstance(getIntent().getIntExtra("type", MessageFragment.TYPE_REPLY_ME), false), MessageFragment.class.getSimpleName()).commit();
         }
     }
 }

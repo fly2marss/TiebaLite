@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.api.models
 
 import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import com.huanchengfly.tieba.post.api.adapters.MessageListAdapter
 import com.huanchengfly.tieba.post.api.adapters.PortraitAdapter
 import com.huanchengfly.tieba.post.models.BaseBean
 
@@ -10,9 +11,11 @@ class MessageListBean : BaseBean() {
     val errorCode: String? = null
     val time: Long = 0
 
+    @JsonAdapter(MessageListAdapter::class)
     @SerializedName("reply_list")
     val replyList: List<MessageInfoBean>? = null
 
+    @JsonAdapter(MessageListAdapter::class)
     @SerializedName("at_list")
     val atList: List<MessageInfoBean>? = null
     val page: PageInfoBean? = null
@@ -20,7 +23,7 @@ class MessageListBean : BaseBean() {
 
     fun getErrorCode() = Integer.valueOf(errorCode!!)
 
-    open inner class UserInfoBean {
+    open class UserInfoBean {
         val id: String? = null
         val name: String? = null
 
@@ -32,7 +35,7 @@ class MessageListBean : BaseBean() {
 
     }
 
-    inner class ReplyerInfoBean : UserInfoBean() {
+    class ReplyerInfoBean : UserInfoBean() {
         @SerializedName("is_friend")
         val isFriend: String? = null
 
@@ -41,7 +44,7 @@ class MessageListBean : BaseBean() {
 
     }
 
-    inner class MessageInfoBean {
+    class MessageInfoBean {
         @SerializedName("is_floor")
         val isFloor: String? = null
         val title: String? = null
@@ -73,7 +76,7 @@ class MessageListBean : BaseBean() {
 
     }
 
-    inner class MessageBean {
+    class MessageBean {
         @SerializedName("replyme")
         val replyMe: String? = null
 
@@ -87,7 +90,7 @@ class MessageListBean : BaseBean() {
 
     }
 
-    inner class PageInfoBean {
+    class PageInfoBean {
         @SerializedName("current_page")
         val currentPage: String? = null
 
@@ -96,6 +99,5 @@ class MessageListBean : BaseBean() {
 
         @SerializedName("has_prev")
         val hasPrev: String? = null
-
     }
 }

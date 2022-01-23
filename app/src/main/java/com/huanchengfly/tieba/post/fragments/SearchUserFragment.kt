@@ -2,50 +2,73 @@ package com.huanchengfly.tieba.post.fragments
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import butterknife.BindView
+import com.alibaba.android.vlayout.DelegateAdapter
+import com.alibaba.android.vlayout.VirtualLayoutManager
+import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.activities.UserActivity
+import com.huanchengfly.tieba.post.adapters.HeaderDelegateAdapter
+import com.huanchengfly.tieba.post.adapters.SearchUserAdapter
+import com.huanchengfly.tieba.post.adapters.base.OnItemClickListener
 import com.huanchengfly.tieba.post.api.TiebaApi
 import com.huanchengfly.tieba.post.api.models.SearchUserBean
 import com.huanchengfly.tieba.post.api.models.SearchUserBean.SearchUserDataBean
-import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.adapters.SearchUserAdapter
-import com.huanchengfly.tieba.post.components.MyLinearLayoutManager
-import com.huanchengfly.tieba.post.components.dividers.SearchDivider
+import com.huanchengfly.tieba.post.components.MyViewHolder
+import com.huanchengfly.tieba.post.dpToPx
+import com.huanchengfly.tieba.post.goToActivity
+import com.huanchengfly.tieba.post.interfaces.ISearchFragment
+import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.scwang.smart.refresh.layout.SmartRefreshLayout
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class SearchUserFragment : BaseFragment() {
+class SearchUserFragment : BaseFragment(), ISearchFragment, OnItemClickListener<SearchUserBean.UserBean> {
     private var keyword: String? = null
-    @BindView(R.id.fragment_search_refresh_layout)
-    lateinit var mRefreshLayout: SwipeRefreshLayout
+
+    @JvmField
+    @BindView(R.id.fragment_search_refresh)
+    var mRefreshLayout: SmartRefreshLayout? = null
+
     @BindView(R.id.fragment_search_recycler_view)
     lateinit var mRecyclerView: RecyclerView
-    private var mAdapter: SearchUserAdapter? = null
+    private lateinit var virtualLayoutManager: VirtualLayoutManager
+    private lateinit var delegateAdapter: DelegateAdapter
+    private lateinit var exactMatchAdapter: SearchUserAdapter
+    private lateinit var fuzzyMatchAdapter: SearchUserAdapter
     private var mData: SearchUserDataBean? = null
-    fun setKeyword(keyword: String?, refresh: Boolean) {
+
+    override fun setKeyword(
+            keyword: String?,
+            needRefresh: Boolean
+    ) {
         this.keyword = keyword
-        if (refresh) {
-            refresh()
-        } else {
-            mData = null
-            mAdapter!!.reset()
+        this.mData = null
+        if (needRefresh) {
+            mRefreshLayout?.autoRefresh()
         }
     }
 
     override fun onFragmentVisibleChange(isVisible: Boolean) {
         if (mData == null && isVisible) {
-            refresh()
+            mRefreshLayout?.autoRefresh()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (arguments != null) {
-            keyword = arguments!!.getString(ARG_KEYWORD)
+            keyword = requireArguments().getString(ARG_KEYWORD)
+        }
+        virtualLayoutManager = VirtualLayoutManager(attachContext)
+        delegateAdapter = DelegateAdapter(virtualLayoutManager)
+        exactMatchAdapter = SearchUserAdapter(attachContext).apply {
+            setOnItemClickListener(this@SearchUserFragment)
+        }
+        fuzzyMatchAdapter = SearchUserAdapter(attachContext).apply {
+            setOnItemClickListener(this@SearchUserFragment)
         }
     }
 
@@ -55,53 +78,89 @@ class SearchUserFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        mAdapter = SearchUserAdapter(attachContext).apply {
-            setLoadEndView(R.layout.layout_footer_loadend)
-            setLoadFailedView(R.layout.layout_footer_load_failed)
-        }
         mRecyclerView.apply {
-            layoutManager = MyLinearLayoutManager(attachContext)
-            addItemDecoration(SearchDivider(attachContext))
-            adapter = mAdapter
+            layoutManager = virtualLayoutManager
+            adapter = delegateAdapter
         }
-        mRefreshLayout.apply {
+        mRefreshLayout!!.apply {
+            setEnableLoadMore(false)
             setOnRefreshListener { refresh() }
-            ThemeUtil.setThemeForSwipeRefreshLayout(this)
+            ThemeUtil.setThemeForSmartRefreshLayout(this)
         }
     }
 
+    private fun reloadAdapters() {
+        delegateAdapter.clear()
+        if (mData != null) {
+            if (mData!!.exactMatch != null) {
+                exactMatchAdapter.setData(listOf(mData!!.exactMatch!!))
+                delegateAdapter.addAdapter(HeaderDelegateAdapter(
+                        attachContext,
+                        R.string.title_exact_match,
+                        R.drawable.ic_round_graphic_eq
+                ).apply {
+                    setHeaderBackgroundResource(R.drawable.bg_top_radius_8dp)
+                    topMargin = attachContext.resources.getDimensionPixelSize(R.dimen.card_margin)
+                    startPadding = 16.dpToPx()
+                    endPadding = 16.dpToPx()
+                })
+                delegateAdapter.addAdapter(exactMatchAdapter)
+            }
+            if (!mData!!.fuzzyMatch.isNullOrEmpty()) {
+                fuzzyMatchAdapter.setData(mData!!.fuzzyMatch!!)
+                delegateAdapter.addAdapter(HeaderDelegateAdapter(
+                        attachContext,
+                        R.string.title_fuzzy_match,
+                        R.drawable.ic_infinite
+                ).apply {
+                    setHeaderBackgroundResource(R.drawable.bg_top_radius_8dp)
+                    topMargin = attachContext.resources.getDimensionPixelSize(R.dimen.card_margin)
+                    startPadding = 16.dpToPx()
+                    endPadding = 16.dpToPx()
+                })
+                delegateAdapter.addAdapter(fuzzyMatchAdapter)
+            }
+        }
+        delegateAdapter.notifyDataSetChanged()
+    }
+
     private fun refresh() {
-        mRefreshLayout.isRefreshing = true
+        if (keyword == null) {
+            return
+        }
         TiebaApi.getInstance().searchUser(keyword!!).enqueue(object : Callback<SearchUserBean> {
             override fun onResponse(call: Call<SearchUserBean>, response: Response<SearchUserBean>) {
                 val searchUserDataBean = response.body()!!.data
                 mData = searchUserDataBean
-                mAdapter!!.setData(searchUserDataBean)
-                mRefreshLayout.isRefreshing = false
-                if (searchUserDataBean?.hasMore == 0) mAdapter!!.loadEnd()
+                reloadAdapters()
+                mRefreshLayout?.finishRefreshWithNoMoreData()
             }
 
             override fun onFailure(call: Call<SearchUserBean>, t: Throwable) {
-                mRefreshLayout.isRefreshing = false
-                Toast.makeText(attachContext, t.message, Toast.LENGTH_SHORT).show()
+                t.message?.let { attachContext.toastShort(it) }
+                mRefreshLayout?.finishRefresh(false)
             }
         })
     }
 
     override fun onFragmentFirstVisible() {
-        refresh()
+        mRefreshLayout!!.autoRefresh()
     }
 
     companion object {
         const val TAG = "SearchUserFragment"
         const val ARG_KEYWORD = "keyword"
+
         @JvmStatic
-        fun newInstance(keyword: String?): SearchUserFragment {
-            val forumFragment = SearchUserFragment()
-            val bundle = Bundle()
-            bundle.putString(ARG_KEYWORD, keyword)
-            forumFragment.arguments = bundle
-            return forumFragment
+        @JvmOverloads
+        fun newInstance(keyword: String? = null): SearchUserFragment = SearchUserFragment().apply {
+            arguments = Bundle().apply {
+                putString(ARG_KEYWORD, keyword)
+            }
         }
+    }
+
+    override fun onClick(viewHolder: MyViewHolder, item: SearchUserBean.UserBean, position: Int) {
+        goToActivity<UserActivity> { putExtra(UserActivity.EXTRA_UID, item.id) }
     }
 }

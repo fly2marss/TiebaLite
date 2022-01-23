@@ -1,5 +1,7 @@
 package com.huanchengfly.tieba.post.utils;
 
+import static com.huanchengfly.tieba.post.activities.ForumActivity.EXTRA_FORUM_NAME;
+
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.ActivityNotFoundException;
@@ -16,22 +18,20 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.browser.customtabs.CustomTabsIntent;
 
-import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
+import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.activities.FloorActivity;
 import com.huanchengfly.tieba.post.activities.ForumActivity;
-import com.huanchengfly.tieba.post.R;
-import com.huanchengfly.tieba.post.activities.ThreadActivity;
-import com.huanchengfly.tieba.post.activities.WebViewActivity;
 import com.huanchengfly.tieba.post.activities.LoginActivity;
+import com.huanchengfly.tieba.post.activities.ThreadActivity;
 import com.huanchengfly.tieba.post.activities.UserActivity;
+import com.huanchengfly.tieba.post.activities.WebViewActivity;
 import com.huanchengfly.tieba.post.components.dialogs.PermissionDialog;
 import com.huanchengfly.tieba.post.models.PermissionBean;
+import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Map;
-
-import static com.huanchengfly.tieba.post.activities.ForumActivity.EXTRA_FORUM_NAME;
 
 public final class NavigationHelper {
     public static final String TAG = "NavigationHelper";
@@ -171,8 +171,11 @@ public final class NavigationHelper {
     }
 
     private boolean navigationByUrl(String url, @NonNull String oldUrl) {
-        Uri uri = Uri.parse(url),
-                oldUri = Uri.parse(oldUrl);
+        if (url == null || oldUrl == null) {
+            return false;
+        }
+        Uri uri = Uri.parse(url);
+        Uri oldUri = Uri.parse(oldUrl);
         String host = uri.getHost(),
                 path = uri.getPath(),
                 oldHost = oldUri.getHost(),

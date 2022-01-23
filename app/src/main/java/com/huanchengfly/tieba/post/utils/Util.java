@@ -1,5 +1,8 @@
 package com.huanchengfly.tieba.post.utils;
 
+import static android.content.Intent.ACTION_VIEW;
+import static com.huanchengfly.tieba.post.utils.ColorUtils.greifyColor;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -15,7 +18,6 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -44,9 +46,6 @@ import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Calendar;
-
-import static android.content.Intent.ACTION_VIEW;
-import static com.huanchengfly.tieba.post.utils.ColorUtils.greifyColor;
 
 public class Util {
     public static final String TAG = "Util";
@@ -235,7 +234,7 @@ public class Util {
                 color = 0xFFFF9C19;
                 break;
         }
-        return greifyColor(color, 0.25f);
+        return greifyColor(color, 0.2f);
     }
 
     public static @ColorInt
@@ -308,14 +307,6 @@ public class Util {
         int green = Color.green(color);
         int blue = Color.blue(color);
         return Color.argb(alpha, red, green, blue);
-    }
-
-    public static String getTime(String replyTime) {
-        replyTime = fixTimestampStr(replyTime);
-        if (replyTime == null) {
-            return null;
-        }
-        return DateUtils.getRelativeTimeSpanString(Long.valueOf(replyTime)).toString();
     }
 
     public static String fixTimestampStr(String timestampStr) {

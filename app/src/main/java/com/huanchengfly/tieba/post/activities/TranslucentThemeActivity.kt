@@ -10,18 +10,16 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import android.view.MotionEvent
-import android.view.View
-import android.widget.Button
+import android.view.*
+import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
-import android.widget.TextView
 import androidx.annotation.ColorInt
-import androidx.appcompat.widget.Toolbar
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.ContextCompat
 import androidx.core.text.HtmlCompat
 import androidx.palette.graphics.Palette
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import butterknife.BindView
 import com.bumptech.glide.Glide
@@ -29,21 +27,24 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.gyf.immersionbar.ImmersionBar
-import com.huanchengfly.tieba.post.BaseApplication
+import com.huanchengfly.tieba.post.*
 import com.huanchengfly.tieba.post.BaseApplication.Companion.translucentBackground
-import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.adapters.ThemeColorAdapter
+import com.huanchengfly.tieba.post.adapters.TranslucentThemeColorAdapter
+import com.huanchengfly.tieba.post.adapters.WallpaperAdapter
+import com.huanchengfly.tieba.post.api.LiteApi
+import com.huanchengfly.tieba.post.api.retrofit.doIfSuccess
 import com.huanchengfly.tieba.post.components.MyImageEngine
 import com.huanchengfly.tieba.post.components.MyLinearLayoutManager
+import com.huanchengfly.tieba.post.components.dividers.HorizontalSpacesDecoration
 import com.huanchengfly.tieba.post.components.transformations.BlurTransformation
 import com.huanchengfly.tieba.post.interfaces.OnItemClickListener
-import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils
-import com.huanchengfly.tieba.post.utils.ColorUtils
-import com.huanchengfly.tieba.post.utils.ImageUtil
-import com.huanchengfly.tieba.post.utils.PermissionUtil
-import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.*
+import com.huanchengfly.tieba.post.utils.ThemeUtil.TRANSLUCENT_THEME_DARK
+import com.huanchengfly.tieba.post.utils.ThemeUtil.TRANSLUCENT_THEME_LIGHT
+import com.huanchengfly.tieba.post.widgets.theme.TintMaterialButton
 import com.jrummyapps.android.colorpicker.ColorPickerDialog
 import com.jrummyapps.android.colorpicker.ColorPickerDialogListener
 import com.yalantis.ucrop.UCrop
@@ -51,6 +52,8 @@ import com.yanzhenjie.permission.Action
 import com.yanzhenjie.permission.runtime.Permission
 import com.zhihu.matisse.Matisse
 import com.zhihu.matisse.MimeType
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.launch
 import java.io.File
 
 class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBarChangeListener, ColorPickerDialogListener {
@@ -61,50 +64,139 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
 
     @BindView(R.id.select_color)
     lateinit var mSelectColor: View
-    private var mAdapter: ThemeColorAdapter? = null
+
+    @BindView(R.id.recommend_wallpapers)
+    lateinit var recommendWallpapers: View
+
+    @BindView(R.id.wallpapers_rv)
+    lateinit var recommendWallpapersRv: RecyclerView
 
     @BindView(R.id.progress)
     lateinit var mProgress: View
+
+    @BindView(R.id.dark_color)
+    lateinit var darkColorBtn: TintMaterialButton
+
+    @BindView(R.id.light_color)
+    lateinit var lightColorBtn: TintMaterialButton
+
+    @BindView(R.id.button_back)
+    lateinit var backBtn: View
+
+    @BindView(R.id.bottom_sheet)
+    lateinit var bottomSheet: LinearLayout
+
+    @BindView(R.id.button_finish)
+    lateinit var finishBtn: View
+
+    @BindView(R.id.mask)
+    lateinit var maskView: View
+
+    @BindView(R.id.experimental_tip)
+    lateinit var experimentalTipView: View
+
+    @BindView(R.id.color_theme)
+    lateinit var colorTheme: ViewGroup
+
+    var wallpapers: List<String>? = null
+        set(value) {
+            field = value
+            refreshWallpapers()
+        }
+    private val wallpaperAdapter: WallpaperAdapter by lazy { WallpaperAdapter(this) }
+
+    private val mTranslucentThemeColorAdapter: TranslucentThemeColorAdapter by lazy {
+        TranslucentThemeColorAdapter(
+            this
+        )
+    }
+
+    private fun launchUCrop(sourceUri: Uri) {
+        mProgress.visibility = View.VISIBLE
+        Glide.with(this)
+            .asBitmap()
+            .load(sourceUri)
+            .into(object : CustomTarget<Bitmap>() {
+                override fun onLoadCleared(placeholder: Drawable?) {}
+
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    mProgress.visibility = View.GONE
+                    val file =
+                        ImageUtil.bitmapToFile(resource, File(cacheDir, "origin_background.jpg"))
+                    val sourceFileUri = Uri.fromFile(file)
+                    val destUri = Uri.fromFile(File(filesDir, "cropped_background.jpg"))
+                    val height = BaseApplication.ScreenInfo.EXACT_SCREEN_HEIGHT.toFloat()
+                    val width = BaseApplication.ScreenInfo.EXACT_SCREEN_WIDTH.toFloat()
+                    UCrop.of(sourceFileUri, destUri)
+                        .withAspectRatio(width / height, 1f)
+                        .withOptions(UCrop.Options().apply {
+                            setShowCropFrame(true)
+                            setShowCropGrid(true)
+                            setStatusBarColor(
+                                ColorUtils.getDarkerColor(
+                                    ThemeUtils.getColorByAttr(
+                                        this@TranslucentThemeActivity,
+                                        R.attr.colorPrimary
+                                    )
+                                )
+                            )
+                            setToolbarColor(
+                                ThemeUtils.getColorByAttr(
+                                    this@TranslucentThemeActivity,
+                                    R.attr.colorPrimary
+                                )
+                            )
+                            setToolbarWidgetColor(
+                                ThemeUtils.getColorByAttr(
+                                    this@TranslucentThemeActivity,
+                                    R.attr.colorTextOnPrimary
+                                )
+                            )
+                            setActiveControlsWidgetColor(
+                                ThemeUtils.getColorByAttr(
+                                    this@TranslucentThemeActivity,
+                                    R.attr.colorAccent
+                                )
+                            )
+                            setLogoColor(
+                                ThemeUtils.getColorByAttr(
+                                    this@TranslucentThemeActivity,
+                                    R.attr.colorPrimary
+                                )
+                            )
+                            setCompressionFormat(Bitmap.CompressFormat.JPEG)
+                        })
+                        .start(this@TranslucentThemeActivity)
+                }
+
+                override fun onLoadFailed(errorDrawable: Drawable?) {
+                    mProgress.visibility = View.GONE
+                    toastShort(R.string.text_load_failed)
+                }
+            })
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_CODE_CHOOSE && resultCode == Activity.RESULT_OK) {
             val sourceUri = Matisse.obtainResult(data)[0]
-            Glide.with(this)
-                    .asDrawable()
-                    .load(sourceUri)
-                    .into(object : CustomTarget<Drawable>() {
-                        override fun onLoadCleared(placeholder: Drawable?) {}
-
-                        override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                            val bitmap = ImageUtil.drawableToBitmap(resource)
-                            val file = ImageUtil.bitmapToFile(bitmap, File(cacheDir, "origin_background.jpg"))
-                            val sourceFileUri = Uri.fromFile(file)
-                            val destUri = Uri.fromFile(File(cacheDir, "cropped_background.jpg"))
-                            val height = BaseApplication.ScreenInfo.EXACT_SCREEN_HEIGHT.toFloat()
-                            val width = BaseApplication.ScreenInfo.EXACT_SCREEN_WIDTH.toFloat()
-                            val uCropOptions = UCrop.Options()
-                            uCropOptions.setShowCropFrame(true)
-                            uCropOptions.setShowCropGrid(true)
-                            uCropOptions.setStatusBarColor(ColorUtils.getDarkerColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorPrimary)))
-                            uCropOptions.setToolbarColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorPrimary))
-                            uCropOptions.setToolbarWidgetColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorTextOnPrimary))
-                            uCropOptions.setActiveWidgetColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorAccent))
-                            uCropOptions.setActiveControlsWidgetColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorAccent))
-                            uCropOptions.setLogoColor(ThemeUtils.getColorByAttr(this@TranslucentThemeActivity, R.attr.colorPrimary))
-                            uCropOptions.setCompressionFormat(Bitmap.CompressFormat.JPEG)
-                            UCrop.of(sourceFileUri, destUri)
-                                    .withAspectRatio(width / height, 1f)
-                                    .withOptions(uCropOptions)
-                                    .start(this@TranslucentThemeActivity)
-                        }
-                    })
+            launchUCrop(sourceUri)
         } else if (resultCode == Activity.RESULT_OK && requestCode == UCrop.REQUEST_CROP) {
             mUri = UCrop.getOutput(data!!)
-            invalidateOptionsMenu()
+            invalidateFinishBtn()
             refreshBackground()
         } else if (resultCode == UCrop.RESULT_ERROR) {
             val cropError = UCrop.getError(data!!)
             cropError!!.printStackTrace()
+        }
+    }
+
+    private fun refreshWallpapers() {
+        if (wallpapers.isNullOrEmpty()) {
+            recommendWallpapers.visibility = View.GONE
+        } else {
+            recommendWallpapers.visibility = View.VISIBLE
+            wallpaperAdapter.setData(wallpapers)
         }
     }
 
@@ -116,7 +208,7 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
             return
         }
         var bgOptions = RequestOptions.centerCropTransform()
-                .skipMemoryCache(true)
+            .skipMemoryCache(true)
                 .diskCacheStrategy(DiskCacheStrategy.NONE)
         if (blur > 0) {
             bgOptions = bgOptions.transform(BlurTransformation(blur))
@@ -129,10 +221,9 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
                     override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
                         resource.alpha = alpha
                         val bitmap = ImageUtil.drawableToBitmap(resource)
-                        findViewById(R.id.background).backgroundTintList = null
                         findViewById(R.id.background).background = BitmapDrawable(resources, bitmap)
                         mPalette = Palette.from(bitmap).generate()
-                        mAdapter!!.setPalette(mPalette)
+                        mTranslucentThemeColorAdapter.setPalette(mPalette)
                         mSelectColor.visibility = View.VISIBLE
                         mProgress.visibility = View.GONE
                     }
@@ -154,26 +245,59 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
     @SuppressLint("ApplySharedPref", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setSupportActionBar(findViewById(R.id.toolbar) as Toolbar)
-        supportActionBar!!.setDisplayHomeAsUpEnabled(true)
-        supportActionBar!!.setTitle(R.string.title_dialog_translucent_theme)
-        (findViewById(R.id.tip) as TextView).apply {
-            text = HtmlCompat.fromHtml(getString(R.string.tip_translucent_theme), HtmlCompat.FROM_HTML_MODE_LEGACY)
+        experimentalTipView.setOnClickListener {
+            showDialog {
+                setTitle(R.string.title_translucent_theme_experimental_feature)
+                setMessage(
+                    HtmlCompat.fromHtml(
+                        getString(R.string.tip_translucent_theme),
+                        HtmlCompat.FROM_HTML_MODE_LEGACY
+                    )
+                )
+                setNegativeButton(R.string.btn_close, null)
+            }
         }
-        (findViewById(R.id.custom_color) as Button).apply {
-            setOnClickListener(this@TranslucentThemeActivity)
+        listOf(
+            findViewById(R.id.custom_color),
+            findViewById(R.id.select_pic),
+            darkColorBtn,
+            lightColorBtn,
+            backBtn,
+            finishBtn
+        ).forEach {
+            it.setOnClickListener(this@TranslucentThemeActivity)
         }
-        (findViewById(R.id.select_pic) as Button).apply {
-            setOnClickListener(this@TranslucentThemeActivity)
+        wallpapers =
+            CacheUtil.getCache(this, "recommend_wallpapers", List::class.java) as List<String>?
+        colorTheme.enableChangingLayoutTransition()
+        wallpaperAdapter.setOnItemClickListener { _, item, _ ->
+            launchUCrop(Uri.parse(item))
         }
-        mAdapter = ThemeColorAdapter(this)
-        mAdapter!!.onItemClickListener = OnItemClickListener { _: View?, themeColor: Int, _: Int, _: Int ->
-            appPreferences.translucentPrimaryColor = toString(themeColor)
-            ThemeUtils.refreshUI(this)
-        }
+        recommendWallpapersRv.addItemDecoration(
+            HorizontalSpacesDecoration(
+                0,
+                0,
+                16.dpToPx(),
+                16.dpToPx(),
+                false
+            )
+        )
+        recommendWallpapersRv.adapter = wallpaperAdapter
+        recommendWallpapersRv.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        mTranslucentThemeColorAdapter.onItemClickListener =
+            OnItemClickListener { _: View?, themeColor: Int, _: Int, _: Int ->
+                appPreferences.translucentPrimaryColor = toString(themeColor)
+                ThemeUtils.refreshUI(this)
+            }
         (findViewById(R.id.select_color_recycler_view) as RecyclerView).apply {
-            layoutManager = MyLinearLayoutManager(this@TranslucentThemeActivity, MyLinearLayoutManager.HORIZONTAL, false)
-            adapter = mAdapter
+            addItemDecoration(HorizontalSpacesDecoration(0, 0, 12.dpToPx(), 12.dpToPx(), false))
+            layoutManager = MyLinearLayoutManager(
+                this@TranslucentThemeActivity,
+                MyLinearLayoutManager.HORIZONTAL,
+                false
+            )
+            adapter = mTranslucentThemeColorAdapter
         }
         alpha = appPreferences.translucentBackgroundAlpha
         blur = appPreferences.translucentBackgroundBlur
@@ -187,15 +311,46 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
         }
         mProgress.setOnTouchListener { _: View?, _: MotionEvent? -> true }
         mProgress.visibility = View.GONE
-        findViewById(R.id.background).setBackgroundColor(Color.BLACK)
+        val file = File(filesDir, "cropped_background.jpg")
+        if (file.exists()) {
+            mUri = Uri.fromFile(file)
+            invalidateFinishBtn()
+        }
+        val bottomSheetBehavior =
+            (bottomSheet.layoutParams as CoordinatorLayout.LayoutParams).behavior as BottomSheetBehavior
+        bottomSheetBehavior.addBottomSheetCallback(object :
+            BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {}
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                maskView.alpha = slideOffset
+                maskView.visibility = if (slideOffset < 0.01f) {
+                    View.GONE
+                } else {
+                    View.VISIBLE
+                }
+            }
+
+        })
+        maskView.setOnClickListener {
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+        refreshBackground()
+        refreshTheme()
+        fetchWallpapers()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.menu_translucent_theme_toolbar, menu)
-        return super.onCreateOptionsMenu(menu)
+    private fun fetchWallpapers() {
+        launch(IO + job) {
+            LiteApi.instance
+                .wallpapersAsync()
+                .doIfSuccess {
+                    CacheUtil.putCache(this@TranslucentThemeActivity, "recommend_wallpapers", it)
+                    wallpapers = it
+                }
+        }
     }
 
-    @SuppressLint("ApplySharedPref")
     override fun onColorSelected(dialogId: Int, color: Int) {
         appPreferences.translucentPrimaryColor = toString(color)
         ThemeUtils.refreshUI(this)
@@ -203,29 +358,8 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
 
     override fun onDialogDismissed(dialogId: Int) {}
 
-    @SuppressLint("ApplySharedPref")
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_finish -> {
-                appPreferences.apply {
-                    translucentBackgroundAlpha = alpha
-                    translucentBackgroundBlur = blur
-                }
-                savePic(object : SavePicCallback<File> {
-                    override fun onSuccess(t: File) {
-                        ThemeUtil.getSharedPreferences(this@TranslucentThemeActivity)
-                                .edit()
-                                .putString(ThemeUtil.SP_THEME, ThemeUtil.THEME_TRANSLUCENT)
-                                .putString(ThemeUtil.SP_OLD_THEME, ThemeUtil.THEME_TRANSLUCENT)
-                                .commit()
-                        toastShort(R.string.toast_save_pic_success)
-                        translucentBackground = null
-                        mProgress.visibility = View.GONE
-                        finish()
-                    }
-                })
-                return true
-            }
             R.id.select_color -> return true
         }
         return super.onOptionsItemSelected(item)
@@ -258,10 +392,12 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
                 })
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        val finishItem = menu.findItem(R.id.menu_finish)
-        finishItem.isEnabled = mUri != null
-        return super.onPrepareOptionsMenu(menu)
+    private fun invalidateFinishBtn() {
+        if (mUri != null) {
+            finishBtn.visibility = View.VISIBLE
+        } else {
+            finishBtn.visibility = View.GONE
+        }
     }
 
     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {}
@@ -274,15 +410,58 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
         refreshBackground()
     }
 
+    private fun refreshTheme() {
+        when (appPreferences.translucentBackgroundTheme) {
+            TRANSLUCENT_THEME_DARK -> {
+                darkColorBtn.setBackgroundTintResId(R.color.default_color_accent)
+                darkColorBtn.setTextColorResId(R.color.white)
+                darkColorBtn.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                        ContextCompat.getDrawable(this, R.drawable.ic_round_check_circle), null, null, null
+                )
+                lightColorBtn.setBackgroundTintResId(R.color.color_divider)
+                lightColorBtn.setTextColorResId(R.color.color_text_secondary)
+                lightColorBtn.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
+            }
+            TRANSLUCENT_THEME_LIGHT -> {
+                darkColorBtn.setBackgroundTintResId(R.color.color_divider)
+                darkColorBtn.setTextColorResId(R.color.color_text_secondary)
+                darkColorBtn.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null, null)
+                lightColorBtn.setBackgroundTintResId(R.color.default_color_accent)
+                lightColorBtn.setTextColorResId(R.color.white)
+                lightColorBtn.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                        ContextCompat.getDrawable(this, R.drawable.ic_round_check_circle), null, null, null
+                )
+            }
+        }
+    }
+
     override fun onClick(v: View) {
         when (v.id) {
-            R.id.select_pic -> askPermission(Action {
+            R.id.button_finish -> {
+                appPreferences.apply {
+                    translucentBackgroundAlpha = alpha
+                    translucentBackgroundBlur = blur
+                }
+                savePic(object : SavePicCallback<File> {
+                    override fun onSuccess(t: File) {
+                        appPreferences.theme = ThemeUtil.THEME_TRANSLUCENT
+                        toastShort(R.string.toast_save_pic_success)
+                        translucentBackground = null
+                        mProgress.visibility = View.GONE
+                        finish()
+                    }
+                })
+            }
+            R.id.button_back -> {
+                finish()
+            }
+            R.id.select_pic -> askPermission {
                 Matisse.from(this)
                         .choose(MimeType.ofImage())
                         .theme(if (ThemeUtil.isNightMode(this)) R.style.Matisse_Dracula else R.style.Matisse_Zhihu)
                         .imageEngine(MyImageEngine())
                         .forResult(REQUEST_CODE_CHOOSE)
-            })
+            }
             R.id.custom_color -> {
                 val primaryColorPicker = ColorPickerDialog.newBuilder()
                         .setDialogTitle(R.string.title_color_picker_primary)
@@ -294,6 +473,14 @@ class TranslucentThemeActivity : BaseActivity(), View.OnClickListener, OnSeekBar
                         .create()
                 primaryColorPicker.setColorPickerDialogListener(this)
                 primaryColorPicker.show(fragmentManager, "ColorPicker_TranslucentThemePrimaryColor")
+            }
+            R.id.dark_color -> {
+                appPreferences.translucentBackgroundTheme = TRANSLUCENT_THEME_DARK
+                refreshTheme()
+            }
+            R.id.light_color -> {
+                appPreferences.translucentBackgroundTheme = TRANSLUCENT_THEME_LIGHT
+                refreshTheme()
             }
         }
     }

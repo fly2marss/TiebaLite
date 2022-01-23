@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.components.dividers;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.view.View;
@@ -11,10 +12,10 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.huanchengfly.tieba.post.ui.theme.interfaces.Tintable;
-import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.adapters.SearchForumAdapter;
+import com.huanchengfly.tieba.post.ui.theme.interfaces.Tintable;
+import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils;
 import com.huanchengfly.tieba.post.utils.DisplayUtil;
 
 public class SearchDivider extends RecyclerView.ItemDecoration implements Tintable {
@@ -24,14 +25,12 @@ public class SearchDivider extends RecyclerView.ItemDecoration implements Tintab
     private int mOrientation;
     private int mDividerHeight;
     private int mCommonDividerHeight;
-    private Context mContext;
 
     public SearchDivider(Context context) {
-        mContext = context;
         mOrientation = LinearLayoutManager.VERTICAL;
         mDivider = ContextCompat.getDrawable(context, R.drawable.drawable_divider);
         mDividerHeight = DisplayUtil.dp2px(context, 8);
-        mCommonDividerHeight = DisplayUtil.dp2px(context, 1);
+        mCommonDividerHeight = DisplayUtil.dp2px(context, 0);
         tint();
     }
 
@@ -95,6 +94,6 @@ public class SearchDivider extends RecyclerView.ItemDecoration implements Tintab
 
     @Override
     public void tint() {
-        mDivider = ThemeUtils.tintDrawable(mDivider, ThemeUtils.getColorByAttr(mContext, R.attr.colorDivider));
+        mDivider = ThemeUtils.tintDrawable(mDivider, Color.TRANSPARENT);
     }
 }

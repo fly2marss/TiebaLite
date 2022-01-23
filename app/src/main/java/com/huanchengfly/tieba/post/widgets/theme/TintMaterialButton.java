@@ -8,9 +8,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.material.button.MaterialButton;
+import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.ui.theme.interfaces.Tintable;
 import com.huanchengfly.tieba.post.ui.theme.utils.ColorStateListUtils;
-import com.huanchengfly.tieba.post.R;
 
 public class TintMaterialButton extends MaterialButton implements Tintable {
     private int mBackgroundTintResId;
@@ -60,5 +60,15 @@ public class TintMaterialButton extends MaterialButton implements Tintable {
         if (mStrokeColorResId != 0) {
             setStrokeColor(ColorStateListUtils.createColorStateList(getContext(), mStrokeColorResId));
         }
+    }
+
+    public void setTextColorResId(int textColorResId) {
+        mTextColorResId = textColorResId;
+        applyTintColor();
+    }
+
+    public void setBackgroundTintResId(int backgroundTintResId) {
+        mBackgroundTintResId = backgroundTintResId;
+        applyTintColor();
     }
 }

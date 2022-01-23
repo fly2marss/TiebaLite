@@ -16,16 +16,12 @@ import com.google.android.material.snackbar.Snackbar
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.BlockListActivity
 import com.huanchengfly.tieba.post.activities.LoginActivity
-import com.huanchengfly.tieba.post.api.LiteApi.Companion.instance
-import com.huanchengfly.tieba.post.api.interfaces.CommonAPICallback
-import com.huanchengfly.tieba.post.api.models.NewUpdateBean
 import com.huanchengfly.tieba.post.components.prefs.TimePickerPreference
 import com.huanchengfly.tieba.post.fragments.preference.PreferencesFragment
 import com.huanchengfly.tieba.post.models.database.Account
 import com.huanchengfly.tieba.post.models.database.Block
 import com.huanchengfly.tieba.post.ui.theme.utils.ThemeUtils
 import com.huanchengfly.tieba.post.utils.*
-import com.lapism.searchview.database.SearchHistoryTable
 import java.util.*
 
 class SettingsFragment : PreferencesFragment() {
@@ -37,7 +33,7 @@ class SettingsFragment : PreferencesFragment() {
 
     private fun refresh() {
         loginInfo = AccountUtil.getLoginInfo(attachContext)
-        val accounts = AccountUtil.getAllAccounts()
+        val accounts = AccountUtil.allAccounts
         val usernameList: MutableList<String> = ArrayList()
         val idList: MutableList<String> = ArrayList()
         for (account in accounts) {
@@ -72,11 +68,6 @@ class SettingsFragment : PreferencesFragment() {
             if (account != null) {
                 TiebaUtil.copyText(attachContext, account.bduss)
             }
-            true
-        }
-        findPreference<Preference>("clear_search_history")!!.onPreferenceClickListener = Preference.OnPreferenceClickListener {
-            SearchHistoryTable(attachContext).clearDatabase()
-            if (view != null) Util.createSnackbar(view!!, R.string.toast_clear_success, Snackbar.LENGTH_SHORT).show()
             true
         }
         findPreference<Preference>("exit_account")!!.isEnabled = AccountUtil.isLoggedIn(attachContext)
@@ -132,7 +123,7 @@ class SettingsFragment : PreferencesFragment() {
         clearCache!!.summary = attachContext.getString(R.string.tip_cache, GlideCacheUtil.getInstance().getCacheSize(attachContext))
         clearCache.onPreferenceClickListener = Preference.OnPreferenceClickListener { preference: Preference ->
             GlideCacheUtil.getInstance().clearImageAllCache(attachContext)
-            if (view != null) Util.createSnackbar(view!!, R.string.toast_clear_cache_success, Snackbar.LENGTH_SHORT).show()
+            if (view != null) Util.createSnackbar(requireView(), R.string.toast_clear_cache_success, Snackbar.LENGTH_SHORT).show()
             preference.summary = attachContext.getString(R.string.tip_cache, "0.0B")
             true
         }
@@ -156,32 +147,37 @@ class SettingsFragment : PreferencesFragment() {
             true
         }
         val aboutPreference = findPreference<Preference>("about")
-        instance!!.newCheckUpdate(object : CommonAPICallback<NewUpdateBean?> {
-            override fun onSuccess(data: NewUpdateBean?) {
-                if (data != null) {
-                    if (data.isHasUpdate == true) {
-                        aboutPreference!!.summary = attachContext.getString(R.string.tip_new_version, data.result?.versionName)
-                    }
-                }
-            }
-
-            override fun onFailure(code: Int, error: String) {}
-        })
         val useCustomTabs = findPreference<SwitchPreference>("use_custom_tabs")
         useCustomTabs!!.isEnabled = !preferenceManager.sharedPreferences.getBoolean("use_webview", true)
         findPreference<Preference>("use_webview")!!.onPreferenceChangeListener = Preference.OnPreferenceChangeListener { _: Preference?, newValue: Any? ->
-            useCustomTabs.isEnabled != newValue as Boolean
+            useCustomTabs.isEnabled = !(newValue as Boolean)
             true
         }
         initListPreference("dark_theme", "dark")
         aboutPreference!!.summary = getString(R.string.tip_about, VersionUtil.getVersionName(attachContext))
         refresh()
+        /*
+        try {
+            val preferenceGroupClazz = PreferenceGroup::class.java
+            val preferencesField = preferenceGroupClazz.getDeclaredField("mPreferences")
+            preferencesField.isAccessible = true
+            val preferencesList = preferencesField.get(preferenceScreen) as List<Preference>
+            attachContext.toastShort("${preferencesList.size}")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        */
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setDivider(ThemeUtils.tintDrawable(ContextCompat.getDrawable(attachContext, R.drawable.drawable_divider_8dp), ThemeUtils.getColorByAttr(attachContext, R.attr.colorDivider)))
-        setDividerHeight(DisplayUtil.dp2px(attachContext, 8f))
+        setDivider(
+                ThemeUtils.tintDrawable(
+                        ContextCompat.getDrawable(attachContext, R.drawable.drawable_divider_8dp),
+                        ThemeUtils.getColorById(attachContext, R.color.default_color_window_background)
+                )
+        )
+        setDividerHeight(0)
     }
 
     private fun initSwitchPreference(key: String, defValue: Boolean = false) {

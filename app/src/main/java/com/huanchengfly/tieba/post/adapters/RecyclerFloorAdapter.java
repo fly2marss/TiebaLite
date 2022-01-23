@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
-import android.text.format.DateUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -33,13 +32,16 @@ import com.huanchengfly.tieba.post.fragments.ConfirmDialogFragment;
 import com.huanchengfly.tieba.post.fragments.MenuDialogFragment;
 import com.huanchengfly.tieba.post.models.PhotoViewBean;
 import com.huanchengfly.tieba.post.models.ReplyInfoBean;
+import com.huanchengfly.tieba.post.plugins.PluginManager;
 import com.huanchengfly.tieba.post.utils.AccountUtil;
 import com.huanchengfly.tieba.post.utils.BilibiliUtil;
+import com.huanchengfly.tieba.post.utils.DateTimeUtils;
 import com.huanchengfly.tieba.post.utils.EmotionUtil;
 import com.huanchengfly.tieba.post.utils.ImageUtil;
 import com.huanchengfly.tieba.post.utils.NavigationHelper;
 import com.huanchengfly.tieba.post.utils.StringUtil;
 import com.huanchengfly.tieba.post.utils.ThemeUtil;
+import com.huanchengfly.tieba.post.utils.TiebaUtil;
 import com.huanchengfly.tieba.post.utils.Util;
 import com.huanchengfly.tieba.post.widgets.MyLinearLayout;
 import com.huanchengfly.tieba.post.widgets.VoicePlayerView;
@@ -131,7 +133,7 @@ public class RecyclerFloorAdapter extends CommonBaseAdapter<SubFloorListBean.Pos
                                     .putExtra("data", replyData));
                             return true;
                         case R.id.menu_report:
-                            navigationHelper.navigationByData(NavigationHelper.ACTION_URL, mContext.getString(R.string.url_post_report, dataBean.getForum().getId(), dataBean.getThread().getId(), postInfo.getId()));
+                            TiebaUtil.reportPost(mContext, postInfo.getId());
                             return true;
                         case R.id.menu_copy:
                             StringBuilder stringBuilder = new StringBuilder();
@@ -177,9 +179,10 @@ public class RecyclerFloorAdapter extends CommonBaseAdapter<SubFloorListBean.Pos
                             }
                             return true;
                     }
-                    return false;
+                    return PluginManager.INSTANCE.performPluginMenuClick(PluginManager.MENU_SUB_POST_ITEM, item.getItemId(), postInfo);
                 })
                 .setInitMenuCallback(menu -> {
+                    PluginManager.INSTANCE.initPluginMenu(menu, PluginManager.MENU_SUB_POST_ITEM);
                     if (TextUtils.equals(AccountUtil.getLoginInfo(mContext).getUid(), postInfo.getAuthor().getId())) {
                         menu.findItem(R.id.menu_delete).setVisible(true);
                     }
@@ -199,9 +202,8 @@ public class RecyclerFloorAdapter extends CommonBaseAdapter<SubFloorListBean.Pos
             showMenu(data, position);
             return true;
         });
-        holder.setOnClickListener(R.id.thread_list_item_reply, view -> showMenu(data, position));
         holder.setText(R.id.thread_list_item_user_name, userInfoBean == null ? "" : StringUtil.getUsernameString(mContext, userInfoBean.getName(), userInfoBean.getNameShow()));
-        holder.setText(R.id.thread_list_item_user_time, String.valueOf(DateUtils.getRelativeTimeSpanString(Long.valueOf(data.getTime()) * 1000L)));
+        holder.setText(R.id.thread_list_item_user_time, DateTimeUtils.getRelativeTimeString(mContext, data.getTime()));
         if (userInfoBean != null) {
             String levelId = userInfoBean.getLevelId() == null || TextUtils.isEmpty(userInfoBean.getLevelId()) ? "?" : userInfoBean.getLevelId();
             ThemeUtil.setChipThemeByLevel(levelId,
@@ -214,7 +216,6 @@ public class RecyclerFloorAdapter extends CommonBaseAdapter<SubFloorListBean.Pos
             });
             ImageUtil.load(holder.getView(R.id.thread_list_item_user_avatar), ImageUtil.LOAD_TYPE_AVATAR, userInfoBean.getPortrait());
         }
-        holder.setVisibility(R.id.thread_list_item_content_title, View.GONE);
         initContentView(holder, data);
     }
 

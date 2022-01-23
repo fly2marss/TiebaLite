@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.api.models
 
 import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import com.huanchengfly.tieba.post.api.adapters.ContentMsgAdapter
 import com.huanchengfly.tieba.post.api.adapters.PortraitAdapter
 import com.huanchengfly.tieba.post.api.adapters.SubPostListAdapter
 import com.huanchengfly.tieba.post.models.BaseBean
@@ -67,6 +68,9 @@ class ThreadContentBean : BaseBean() {
 
         @SerializedName("thread_info")
         val threadInfo: ThreadInfoBean? = null
+
+        @SerializedName("origin_thread_info")
+        val originThreadInfo: OriginThreadInfo? = null
         val author: UserInfoBean? = null
 
         @SerializedName("reply_num")
@@ -77,6 +81,9 @@ class ThreadContentBean : BaseBean() {
 
         @SerializedName("agree_num")
         val agreeNum: String? = null
+
+        @SerializedName("create_time")
+        val createTime: String? = null
 
         @SerializedName("post_id")
         val postId: String? = null
@@ -150,12 +157,20 @@ class ThreadContentBean : BaseBean() {
 
     }
 
+    class OriginThreadInfo {
+        val title: String? = null
+        @JsonAdapter(ContentMsgAdapter::class)
+        val content: List<ContentBean>? = null
+    }
+
     class PostListItemBean {
         val id: String? = null
         val title: String? = null
         val floor: String? = null
         val time: String? = null
+        @JsonAdapter(ContentMsgAdapter::class)
         val content: List<ContentBean>? = null
+        val agree: AgreeBean? = null
 
         @SerializedName("author_id")
         val authorId: String? = null
@@ -174,7 +189,7 @@ class ThreadContentBean : BaseBean() {
         val pid: String? = null
 
         @SerializedName("sub_post_list")
-        val subPostList: List<PostListItemBean>? = null
+        val subPostList: MutableList<PostListItemBean>? = null
 
     }
 

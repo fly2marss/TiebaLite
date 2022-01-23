@@ -30,7 +30,7 @@ public abstract class BaseBottomSheetDialogFragment extends BottomSheetDialogFra
     protected BottomSheetDialog dialog;
     Unbinder mUnbinder;
     View rootView;
-    BottomSheetBehavior mBehavior;
+    protected BottomSheetBehavior mBehavior;
     private Context attachContext;
 
     public BaseBottomSheetDialogFragment() {
@@ -75,13 +75,17 @@ public abstract class BaseBottomSheetDialogFragment extends BottomSheetDialogFra
         return statusBarHeight;
     }
 
+    protected boolean isFullScreen() {
+        return false;
+    }
+
     @Override
     public void onStart() {
         super.onStart();
         Dialog dialog = getDialog();
         if (dialog != null) {
             View bottomSheet = dialog.findViewById(R.id.design_bottom_sheet);
-            bottomSheet.getLayoutParams().height = ViewGroup.LayoutParams.MATCH_PARENT;
+            bottomSheet.getLayoutParams().height = isFullScreen() ? ViewGroup.LayoutParams.MATCH_PARENT : ViewGroup.LayoutParams.WRAP_CONTENT;
         }
         final View view = getView();
         if (view != null) {
@@ -113,7 +117,7 @@ public abstract class BaseBottomSheetDialogFragment extends BottomSheetDialogFra
         dismiss();
     }
 
-    void onCreatedBehavior(BottomSheetBehavior behavior) {
+    protected void onCreatedBehavior(BottomSheetBehavior<?> behavior) {
     }
 
     @NonNull

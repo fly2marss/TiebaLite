@@ -1,5 +1,7 @@
 package com.huanchengfly.tieba.post.utils;
 
+import static android.content.Context.DOWNLOAD_SERVICE;
+
 import android.app.DownloadManager;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -22,12 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
-import static android.content.Context.DOWNLOAD_SERVICE;
-
 public class FileUtil {
     public static final int FILE_TYPE_DOWNLOAD = 0;
     public static final int FILE_TYPE_VIDEO = 1;
     public static final int FILE_TYPE_AUDIO = 2;
+
+    public static final String FILE_FOLDER = "TiebaLite";
 
     public static void deleteAllFiles(File root) {
         File[] files = root.listFiles();
@@ -52,15 +54,13 @@ public class FileUtil {
     }
 
     /**
-     *  
-     *
      * @param context 上下文对象
-     * @param dir      存储目录
+     * @param dir     存储目录
      * @return
      */
     public static String getFilePath(Context context, String dir) {
         String directoryPath = "";
-        //判断SD卡是否可用 
+        //判断SD卡是否可用
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             directoryPath = context.getExternalFilesDir(dir).getAbsolutePath();
         } else {
@@ -183,7 +183,7 @@ public class FileUtil {
                 directory = Environment.DIRECTORY_DOWNLOADS;
                 break;
         }
-        request.setDestinationInExternalPublicDir(directory, "Tieba Lite/" + fileName);
+        request.setDestinationInExternalPublicDir(directory, FILE_FOLDER + File.separator + fileName);
         final DownloadManager downloadManager = (DownloadManager) context.getSystemService(DOWNLOAD_SERVICE);
         // 添加一个下载任务
         if (downloadManager != null) {

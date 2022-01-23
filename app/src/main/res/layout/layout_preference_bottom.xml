@@ -1,18 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.huanchengfly.tieba.post.widgets.theme.TintLinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:minHeight="15dp"
-    android:gravity="center_vertical"
-    android:paddingStart="?android:attr/listPreferredItemPaddingStart"
-    android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+    android:layout_marginStart="@dimen/card_margin"
+    android:layout_marginEnd="@dimen/card_margin"
+    android:background="@drawable/bg_bottom_radius_10dp"
+    android:baselineAligned="false"
     android:clipToPadding="false"
-    android:baselineAligned="false">
+    android:gravity="center_vertical"
+    android:minHeight="15dp"
+    app:backgroundTint="@color/default_color_card">
 
-    <include
-        layout="@layout/layout_preference_icon" />
+    <include layout="@layout/layout_preference_icon" />
 
     <RelativeLayout
         android:layout_width="0dp"
@@ -23,11 +24,11 @@
             android:id="@android:id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:singleLine="true"
-            android:textStyle="bold"
-            app:tintList="@drawable/text_color_selector"
-            android:textAppearance="@style/TextAppearance.MaterialSubhead"
             android:ellipsize="marquee"
+            android:singleLine="true"
+            android:textAppearance="@style/TextAppearance.MaterialSubhead"
+            android:textStyle="bold"
+            app:tint="@color/text_color_selector"
             tools:ignore="PrivateResource" />
 
         <com.huanchengfly.tieba.post.widgets.theme.TintTextView
@@ -37,9 +38,9 @@
             android:layout_below="@android:id/title"
             android:layout_alignStart="@android:id/title"
             android:layout_marginTop="4dp"
+            android:maxLines="10"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            app:tint="@color/default_color_text_secondary"
-            android:maxLines="10"/>
+            app:tint="@color/default_color_text_secondary" />
 
     </RelativeLayout>
 
@@ -49,8 +50,8 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:gravity="end|center_vertical"
-        android:paddingStart="16dp"
         android:orientation="vertical"
+        android:paddingStart="16dp"
         tools:ignore="RtlSymmetry" />
 
-</LinearLayout>
+</com.huanchengfly.tieba.post.widgets.theme.TintLinearLayout>

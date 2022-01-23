@@ -2,9 +2,9 @@ package com.huanchengfly.tieba.post.api.caster;
 
 import android.webkit.URLUtil;
 
+import com.huanchengfly.tieba.post.BaseApplication;
 import com.huanchengfly.tieba.post.api.models.ForumPageBean;
 import com.huanchengfly.tieba.post.api.models.web.ForumBean;
-import com.huanchengfly.tieba.post.BaseApplication;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -106,6 +106,7 @@ public class ForumBeanCaster extends ICaster<ForumBean, ForumPageBean> {
             forumBean.setUserLevel(frsForumBean.getUserLevel());
             forumBean.setMemberNum(frsForumBean.getMemberNum());
             forumBean.setPostNum(frsForumBean.getPostNum());
+            forumBean.setThreadNum(frsForumBean.getThreadNum());
             forumBean.setManagers(frsForumBean.getManagers());
             forumBean.setZyqTitle(frsForumBean.getAttrs().getZyqTitle());
             forumBean.setZyqDefine(frsForumBean.getAttrs().getZyqDefine());

@@ -76,6 +76,10 @@ class FloorFragment : BaseBottomSheetDialogFragment() {
                         AccountUtil.getLoginInfo(attachContext)!!.nameShow).setPn(pn.toString()).toString()))
     }
 
+    override fun isFullScreen(): Boolean {
+        return true
+    }
+
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter()
@@ -103,7 +107,7 @@ class FloorFragment : BaseBottomSheetDialogFragment() {
         ThemeUtil.setTranslucentThemeBackground(rootView.findViewById(R.id.background),
                 false,
                 false,
-                RadiusTransformation(attachContext,
+                RadiusTransformation(
                         8,
                         RadiusTransformation.CORNER_TOP_LEFT or RadiusTransformation.CORNER_TOP_RIGHT))
         toolbar.apply {

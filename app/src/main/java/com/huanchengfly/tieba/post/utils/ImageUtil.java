@@ -1,5 +1,7 @@
 package com.huanchengfly.tieba.post.utils;
 
+import static com.huanchengfly.tieba.post.utils.FileUtil.FILE_FOLDER;
+
 import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -36,9 +38,10 @@ import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions;
 import com.bumptech.glide.request.FutureTarget;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
+import com.huanchengfly.tieba.post.BaseApplication;
+import com.huanchengfly.tieba.post.ExtensionsKt;
 import com.huanchengfly.tieba.post.R;
 import com.huanchengfly.tieba.post.activities.PhotoViewActivity;
-import com.huanchengfly.tieba.post.BaseApplication;
 import com.huanchengfly.tieba.post.components.transformations.RadiusTransformation;
 import com.huanchengfly.tieba.post.models.PhotoViewBean;
 import com.yanzhenjie.permission.runtime.Permission;
@@ -81,6 +84,7 @@ public class ImageUtil {
     public static final int LOAD_TYPE_SMALL_PIC = 0;
     public static final int LOAD_TYPE_AVATAR = 1;
     public static final int LOAD_TYPE_NO_RADIUS = 2;
+    public static final int LOAD_TYPE_ALWAYS_ROUND = 3;
     public static final String TAG = "ImageUtil";
 
     public static File compressImage(Bitmap bitmap, File output, int maxSize) {
@@ -231,7 +235,7 @@ public class ImageUtil {
         }
         new DownloadAsyncTask(context, url, file -> {
             String fileName = URLUtil.guessFileName(url, null, MimeType.JPEG.toString());
-            String relativePath = Environment.DIRECTORY_PICTURES + File.separator + "Tieba Lite";
+            String relativePath = Environment.DIRECTORY_PICTURES + File.separator + FILE_FOLDER;
             if (forShare) {
                 relativePath += File.separator + "shareTemp";
             }
@@ -269,15 +273,14 @@ public class ImageUtil {
         downloadAboveQ(context, url, false, null);
     }
 
-    @SuppressLint("StaticFieldLeak")
     private static void downloadBelowQ(Context context, String url, boolean forShare, @Nullable ShareTaskCallback taskCallback) {
         new DownloadAsyncTask(context, url, file -> {
             File pictureFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getAbsoluteFile();
             File appDir;
             if (forShare) {
-                appDir = new File(pictureFolder, "Tieba Lite" + File.separator + "shareTemp");
+                appDir = new File(pictureFolder, FILE_FOLDER + File.separator + "shareTemp");
             } else {
-                appDir = new File(pictureFolder, "Tieba Lite");
+                appDir = new File(pictureFolder, FILE_FOLDER);
             }
             if (appDir.exists() || appDir.mkdirs()) {
                 if (forShare) {
@@ -399,6 +402,10 @@ public class ImageUtil {
         load(imageView, type, url, false);
     }
 
+    public static void clear(ImageView imageView) {
+        Glide.with(imageView).clear(imageView);
+    }
+
     private static Drawable getPlaceHolder(Context context, int radius) {
         GradientDrawable drawable = new GradientDrawable();
         int color = ThemeUtil.isNightMode(context) ? context.getResources().getColor(R.color.color_place_holder_night) : context.getResources().getColor(R.color.color_place_holder);
@@ -431,18 +438,24 @@ public class ImageUtil {
         }
         switch (type) {
             case LOAD_TYPE_SMALL_PIC:
-                requestBuilder.apply(RequestOptions.bitmapTransform(new RadiusTransformation(imageView.getContext(), radius))
+                requestBuilder.apply(RequestOptions.bitmapTransform(new RadiusTransformation(radius))
                         .placeholder(getPlaceHolder(imageView.getContext(), radius))
                         .skipMemoryCache(true));
                 break;
             case LOAD_TYPE_AVATAR:
-                requestBuilder.apply(RequestOptions.circleCropTransform()
-                        .placeholder(getPlaceHolder(imageView.getContext(), 50))
+                requestBuilder.apply(RequestOptions.bitmapTransform(new RadiusTransformation(6))
+                        .placeholder(getPlaceHolder(imageView.getContext(), 6))
                         .skipMemoryCache(true));
                 break;
             case LOAD_TYPE_NO_RADIUS:
                 requestBuilder.apply(new RequestOptions()
                         .placeholder(getPlaceHolder(imageView.getContext(), 0))
+                        .skipMemoryCache(true));
+                break;
+            case LOAD_TYPE_ALWAYS_ROUND:
+                requestBuilder.apply(new RequestOptions()
+                        .circleCrop()
+                        .placeholder(getPlaceHolder(imageView.getContext(), ExtensionsKt.dpToPx(100)))
                         .skipMemoryCache(true));
                 break;
         }
@@ -531,7 +544,7 @@ public class ImageUtil {
         void onGetUri(Uri uri);
     }
 
-    @IntDef({LOAD_TYPE_SMALL_PIC, LOAD_TYPE_AVATAR, LOAD_TYPE_NO_RADIUS})
+    @IntDef({LOAD_TYPE_SMALL_PIC, LOAD_TYPE_AVATAR, LOAD_TYPE_NO_RADIUS, LOAD_TYPE_ALWAYS_ROUND})
     @Retention(RetentionPolicy.SOURCE)
     public @interface LoadType {
     }
